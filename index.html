@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>เครื่องคำนวณการให้ยา Warfarin</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Kanit&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+    <header>
+        <h1>เครื่องคำนวณการให้ยา Warfarin</h1>
+    </header>
+    <main>
+        <section class="input-section">
+            <label>INR ปัจจุบัน: <input type="number" id="inr" step="0.1" min="0" /></label>
+            <label>ขนาดยาเดิมต่อสัปดาห์ (มก.): <input type="number" id="weeklyDose" step="0.1" min="0" /></label>
+            <label>จำนวนวันนัด: <input type="number" id="days" min="1" /></label>
+            <fieldset>
+                <legend>ขนาดเม็ดยาที่ใช้:</legend>
+                <label><input type="radio" name="tablet" value="3" /> 3 mg</label>
+                <label><input type="radio" name="tablet" value="2" /> 2 mg</label>
+                <label><input type="radio" name="tablet" value="both" checked /> ทั้งคู่</label>
+            </fieldset>
+            <fieldset>
+                <legend>ภาวะเลือดออก:</legend>
+                <label><input type="radio" name="bleeding" value="no" checked /> ไม่มี</label>
+                <label><input type="radio" name="bleeding" value="yes" /> มี</label>
+            </fieldset>
+            <button id="calculate">คำนวณขนาดยา</button>
+        </section>
+        <section id="results"></section>
+    </main>
+    <footer>
+        <p><a href="#">เกี่ยวกับเรา</a> | <a href="#">คู่มือการใช้งาน</a></p>
+    </footer>
+    <script src="script.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").then(() => {
+          console.log("Service Worker registered");
+        });
+      }
+    </script>
+</body>
+</html>
