@@ -1,47 +1,313 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>เครื่องคำนวณการให้ยา Warfarin</title>
-    <link rel="stylesheet" href="style.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Kanit&display=swap" rel="stylesheet" />
-    <link rel="manifest" href="manifest.json" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>เครื่องคำนวณการให้ยา Warfarin</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+    :root{
+      --bg:#fff5f7; /* light pink */
+      --card:#ffffff;
+      --accent:#4db6ac; /* teal/green */
+      --muted:#6b6b6b;
+      --pill-2:#ffb74d; /* orange for 2 mg */
+      --pill-3:#64b5f6; /* blue for 3 mg */
+    }
+    *{box-sizing:border-box;font-family:'Kanit',sans-serif}
+    body{margin:0;background:var(--bg);color:#222;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    header{width:100%;background:#ffccd6;padding:20px 10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+    header h1{margin:0;font-size:20px}
+    main{width:100%;max-width:1000px;padding:18px}
+    .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.06);margin-bottom:16px}
+    form .row{display:flex;gap:12px;margin-bottom:12px}
+    .col{flex:1;min-width:120px}
+    label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+    input[type=number],select{width:100%;padding:8px;border-radius:8px;border:1px solid #eee}
+    .radio-group{display:flex;gap:8px;flex-wrap:wrap}
+    .radio{background:#fafafa;border:1px solid #eee;padding:8px 10px;border-radius:8px}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+    .results{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px}
+    .pill-circle{width:28px;height:28px;border-radius:50%;display:inline-block}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:8px;border-bottom:1px solid #eee;text-align:center;font-size:14px}
+    .small{font-size:13px;color:var(--muted)}
+    .center{text-align:center}
+    footer{width:100%;max-width:1000px;padding:8px;text-align:center;color:var(--muted)}
+    @media (max-width:800px){.results{grid-template-columns:1fr}}
+    .action-row{display:flex;gap:8px;align-items:center}
+  </style>
 </head>
 <body>
-    <header>
-        <h1>เครื่องคำนวณการให้ยา Warfarin</h1>
-    </header>
-    <main>
-        <section class="input-section">
-            <label>INR ปัจจุบัน: <input type="number" id="inr" step="0.1" min="0" /></label>
-            <label>ขนาดยาเดิมต่อสัปดาห์ (มก.): <input type="number" id="weeklyDose" step="0.1" min="0" /></label>
-            <label>จำนวนวันนัด: <input type="number" id="days" min="1" /></label>
-            <fieldset>
-                <legend>ขนาดเม็ดยาที่ใช้:</legend>
-                <label><input type="radio" name="tablet" value="3" /> 3 mg</label>
-                <label><input type="radio" name="tablet" value="2" /> 2 mg</label>
-                <label><input type="radio" name="tablet" value="both" checked /> ทั้งคู่</label>
-            </fieldset>
-            <fieldset>
-                <legend>ภาวะเลือดออก:</legend>
-                <label><input type="radio" name="bleeding" value="no" checked /> ไม่มี</label>
-                <label><input type="radio" name="bleeding" value="yes" /> มี</label>
-            </fieldset>
-            <button id="calculate">คำนวณขนาดยา</button>
-        </section>
-        <section id="results"></section>
-    </main>
-    <footer>
-        <p><a href="#">เกี่ยวกับเรา</a> | <a href="#">คู่มือการใช้งาน</a></p>
-    </footer>
-    <script src="script.js"></script>
-    <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("sw.js").then(() => {
-          console.log("Service Worker registered");
-        });
+  <header>
+    <h1>เครื่องคำนวณการให้ยา Warfarin</h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <form id="calcForm" onsubmit="return false;">
+        <div class="row">
+          <div class="col">
+            <label>INR ปัจจุบัน</label>
+            <input id="inr" type="number" step="0.1" min="0" value="2.5" required />
+          </div>
+          <div class="col">
+            <label>ขนาดยา Warfarin ต่อสัปดาห์ (mg)</label>
+            <input id="currentWeekly" type="number" step="0.1" min="0" value="35" required />
+          </div>
+          <div class="col">
+            <label>จำนวนวันนัด (วัน)</label>
+            <input id="days" type="number" min="1" value="7" required />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>ชนิดเม็ดยาที่ใช้</label>
+            <div class="radio-group">
+              <label class="radio"><input type="radio" name="tablet" value="3" checked /> ใช้เม็ด 3 mg เท่านั้น</label>
+              <label class="radio"><input type="radio" name="tablet" value="2" /> ใช้เม็ด 2 mg เท่านั้น</label>
+              <label class="radio"><input type="radio" name="tablet" value="both" /> ใช้ทั้ง 2 mg และ 3 mg</label>
+            </div>
+          </div>
+          <div class="col">
+            <label>ภาวะเลือดออก</label>
+            <div class="radio-group">
+              <label class="radio"><input type="radio" name="bleed" value="no" checked /> ไม่มี</label>
+              <label class="radio"><input type="radio" name="bleed" value="yes" /> มี</label>
+            </div>
+          </div>
+          <div class="col center">
+            <label>&nbsp;</label>
+            <div class="action-row">
+              <button id="calcBtn" class="btn">คำนวณขนาดยาใหม่</button>
+              <button id="printBtn" class="btn" style="background:#1976d2">พิมพ์ / ดาวน์โหลด PDF</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section id="resultSection" class="card" style="display:none">
+      <div class="results">
+        <div>
+          <h3 class="center">ผลลัพธ์สรุป</h3>
+          <p class="center small">ขนาดยาเดิมต่อสัปดาห์: <strong id="displayOld">-</strong> mg</p>
+          <p class="center">ขนาดยาใหม่ต่อสัปดาห์ (ช่วง)</p>
+          <ul style="list-style:none;padding:0;margin:0;text-align:center">
+            <li>ต่ำสุด: <strong id="newLow">-</strong> mg/สัปดาห์</li>
+            <li>สูงสุด: <strong id="newHigh">-</strong> mg/สัปดาห์</li>
+            <li>เฉลี่ย: <strong id="newAvg">-</strong> mg/สัปดาห์</li>
+          </ul>
+
+          <div style="margin-top:12px">
+            <h4>คำแนะนำโดยสรุป</h4>
+            <p id="advice" class="small">-</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="center">จำนวนเม็ดยารวมที่ต้องจ่าย</h3>
+          <div class="center small">(รวมทั้งช่วงการนัด)</div>
+          <table class="table" id="supplyTable">
+            <thead><tr><th>แผน</th><th>3 mg (เต็ม)</th><th>3 mg (ครึ่ง)</th><th>2 mg (เต็ม)</th><th>2 mg (ครึ่ง)</th><th>รวม mg</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <hr />
+
+      <div>
+        <h3 class="center">แผนการให้ยา 7 วัน (ต่ำสุด / เฉลี่ย / สูงสุด)</h3>
+        <div id="plansContainer"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="small">เกี่ยวกับ: แอปตัวอย่างสำหรับช่วยคำนวณและแสดงแผนการแจกยา — โปรดใช้ดุลยพินิจทางคลินิก</footer>
+
+  <script>
+    // Utility: round to nearest 0.5
+    function roundHalf(x){ return Math.round(x*2)/2; }
+
+    // Find best combination of half-units: 3mg half-unit = 1.5 mg, 2mg half-unit = 1 mg
+    function findBestCombo(target){
+      target = Math.max(0, target);
+      let best = {x:0,y:0,error:1e9};
+      // x = number of 3mg half-units (1.5 mg each)
+      // y = number of 2mg half-units (1.0 mg each)
+      let maxX = Math.ceil(target/1.5)+10;
+      for(let x=maxX;x>=0;x--){
+        // prefer more 3mg so iterate x descending
+        let rem = target - 1.5*x;
+        let y = Math.round(rem/1.0);
+        if(y<0) y=0;
+        let val = 1.5*x + 1.0*y;
+        let err = Math.abs(val - target);
+        if(err < best.error - 1e-9 || (Math.abs(err-best.error) < 1e-9 && x>best.x)){
+          best = {x,y,error:err,val};
+        }
       }
-    </script>
+      return best;
+    }
+
+    // Distribute half-units across 7 days as evenly as possible, returning day arrays
+    function distributeAcrossDays(xHalf3, yHalf2){
+      const days = 7;
+      const day3 = new Array(days).fill(0); // half-units of 3mg
+      const day2 = new Array(days).fill(0); // half-units of 2mg
+      // first distribute full units (pairs of half-units) then single halves
+      let full3 = Math.floor(xHalf3/2); // number of full 3mg tablets
+      let remHalf3 = xHalf3 % 2;
+      // distribute full 3mg tablets as evenly as possible
+      for(let i=0;i<full3;i++) day3[i%days] += 2; // add 2 half-units = 1 full tablet
+      // distribute remaining 3mg half
+      if(remHalf3) day3[(full3)%days] += 1;
+
+      // distribute 2mg half units
+      for(let i=0;i<yHalf2;i++) day2[i%days] +=1;
+
+      // Now build readable plan with counts in full & half
+      const plan = [];
+      for(let i=0;i<days;i++){
+        const half3 = day3[i];
+        const half2 = day2[i];
+        const full3 = Math.floor(half3/2);
+        const half3rem = half3%2;
+        const full2 = Math.floor(half2/2);
+        const half2rem = half2%2;
+        plan.push({day:i+1, full3, half3:half3rem, full2, half2:half2rem, mg: full3*3 + half3rem*1.5 + full2*2 + half2rem*1});
+      }
+      return plan;
+    }
+
+    // Create table rows and plan display
+    function renderPlans(container, label, combo){
+      const x = combo.x; const y = combo.y; const val = combo.val;
+      const plan = distributeAcrossDays(x,y);
+      const table = document.createElement('table');
+      table.className = 'table';
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>วัน</th><th>3 mg (เต็ม)</th><th>3 mg (ครึ่ง)</th><th>2 mg (เต็ม)</th><th>2 mg (ครึ่ง)</th><th>mg/วัน</th></tr>';
+      table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      for(const p of plan){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>วัน${p.day}</td><td>${p.full3}</td><td>${p.half3}</td><td>${p.full2}</td><td>${p.half2}</td><td>${p.mg.toFixed(1)}</td>`;
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card';
+      wrapper.innerHTML = `<h4 class="center">แผน ${label} — ประมาณ ${val.toFixed(1)} mg/สัปดาห์</h4>`;
+      wrapper.appendChild(table);
+      container.appendChild(wrapper);
+      return {totalMg: val, plan};
+    }
+
+    function applyINRRule(inr, bleed){
+      // Returns percent change as [minPct, maxPct] (relative change, e.g. +0.1 = +10%) and message
+      let msg = '';
+      let minPct=0,maxPct=0;
+      if(bleed==='yes'){
+        msg = 'ผู้ป่วยมีภาวะเลือดออก — ควรประเมินทันทีและพิจารณาหยุดยาหรือให้ Vitamin K ตามระดับความรุนแรง.';
+        // in bleeding situation, suggest hold and specialist review. We'll be conservative: reduce 20-50%.
+        minPct = -0.5; maxPct = -0.2;
+        return {minPct,maxPct,msg};
+      }
+      if(inr < 1.5){ minPct = 0.10; maxPct = 0.20; msg = 'INR ต่ำกว่า 1.5 — พิจารณาเพิ่มขนาดยา 10–20% และติดตาม INR บ่อยขึ้น.'; }
+      else if(inr >=1.5 && inr <=1.9){ minPct = 0.05; maxPct = 0.10; msg = 'INR 1.5–1.9 — พิจารณาเพิ่ม 5–10% หรือไม่ปรับแต่ติดตามบ่อยขึ้น.'; }
+      else if(inr >=2.0 && inr <=3.0){ minPct = 0; maxPct = 0; msg = 'INR 2.0–3.0 — อยู่ในช่วงเป้าหมาย ไม่ต้องปรับยา.'; }
+      else if(inr >=3.1 && inr <=3.9){ minPct = -0.10; maxPct = -0.05; msg = 'INR 3.1–3.9 — ลดขนาดยารายสัปดาห์ 5–10%.'; }
+      else if(inr >3.9 && inr <=5.0){ minPct = -0.10; maxPct = -0.10; msg = 'INR 3.9–5.0 และไม่มีเลือดออก — หยุดยา 1 วัน แล้วกลับมาเริ่มด้วยขนาดที่ลดลง 10%.'; }
+      else if(inr >5.0 && inr <=9.0){ minPct = -0.20; maxPct = -0.20; msg = 'INR 5.0–9.0 และไม่มีเลือดออก — หยุดยา 2 วัน แล้วกลับมาเริ่มด้วยขนาดที่ลดลง 20% และพิจารณา Vitamin K1 1–2.5 mg ถ้ามีความเสี่ยง.'; }
+      else if(inr >9.0){ minPct = -1.0; maxPct = -1.0; msg = 'INR >9.0 — หยุดยา ให้ Vitamin K1 ขนาด 2.5–5 mg รับประทาน และติดตาม INR อย่างใกล้ชิด. หากมีเลือดออกรุนแรงให้ให้ IV Vitamin K1 10 mg และ FFP/PCC ตามข้อบ่งชี้.'; }
+      return {minPct,maxPct,msg};
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', ()=>{
+      const inr = parseFloat(document.getElementById('inr').value);
+      const current = parseFloat(document.getElementById('currentWeekly').value);
+      const days = parseInt(document.getElementById('days').value,10);
+      const tablet = document.querySelector('input[name=tablet]:checked').value;
+      const bleed = document.querySelector('input[name=bleed]:checked').value;
+      if(isNaN(inr)||isNaN(current)||isNaN(days)) return alert('กรุณากรอกข้อมูลให้ถูกต้อง');
+
+      // compute adjustment
+      const rule = applyINRRule(inr, bleed);
+      // compute new weekly low/high/avg
+      const newLow = Math.max(0, current * (1 + rule.minPct));
+      const newHigh = Math.max(0, current * (1 + rule.maxPct));
+      const newAvg = (newLow + newHigh)/2;
+
+      // When rule indicates hold (e.g. stop 1 day) we still recommend weekly mg adjusted; user should follow stop instruction in message.
+
+      // Prepare combos according to tablet selection
+      function comboFor(target){
+        if(tablet === '3'){
+          // only 3 mg allowed -> use 3mg half-units (1.5 mg step)
+          // y=0, find x
+          let x = Math.round(target/1.5);
+          if(x<0) x=0;
+          let val = 1.5*x;
+          return {x,y:0,val};
+        } else if(tablet === '2'){
+          // only 2 mg allowed -> use 2mg half-units (1 mg step)
+          let y = Math.round(target/1.0);
+          if(y<0) y=0;
+          let val = 1.0*y;
+          return {x:0,y,val};
+        } else {
+          // both: search for best combo (prefer higher x -> more 3mg)
+          return findBestCombo(target);
+        }
+      }
+
+      const comboLow = comboFor(newLow);
+      const comboAvg = comboFor(newAvg);
+      const comboHigh = comboFor(newHigh);
+
+      // Update UI
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('displayOld').textContent = current.toFixed(1);
+      document.getElementById('newLow').textContent = newLow.toFixed(1);
+      document.getElementById('newHigh').textContent = newHigh.toFixed(1);
+      document.getElementById('newAvg').textContent = newAvg.toFixed(1);
+      document.getElementById('advice').textContent = rule.msg;
+
+      // supply table
+      const tbody = document.querySelector('#supplyTable tbody');
+      tbody.innerHTML = '';
+      function addSupplyRow(name, combo){
+        const x = combo.x; const y = combo.y; const val = combo.val;
+        const full3 = Math.floor(x/2); const half3 = x%2;
+        const full2 = Math.floor(y/2); const half2 = y%2;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${full3}</td><td>${half3}</td><td>${full2}</td><td>${half2}</td><td>${val.toFixed(1)}</td>`;
+        tbody.appendChild(tr);
+      }
+      addSupplyRow('ต่ำสุด', comboLow);
+      addSupplyRow('เฉลี่ย', comboAvg);
+      addSupplyRow('สูงสุด', comboHigh);
+
+      // Plans
+      const plansContainer = document.getElementById('plansContainer');
+      plansContainer.innerHTML = '';
+      renderPlans(plansContainer,'ต่ำสุด',comboLow);
+      renderPlans(plansContainer,'เฉลี่ย',comboAvg);
+      renderPlans(plansContainer,'สูงสุด',comboHigh);
+
+    });
+
+    document.getElementById('printBtn').addEventListener('click', ()=>{
+      window.print();
+    });
+
+    // initialize example
+    document.getElementById('calcBtn').click();
+  </script>
 </body>
 </html>
